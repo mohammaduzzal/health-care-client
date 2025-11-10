@@ -1,40 +1,81 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { jwtDecode } from "jwt-decode";
-import { userInterface } from './types/userTypes';
+import jwt, { JwtPayload } from "jsonwebtoken"
+import { cookies } from 'next/headers';
+import { getDefaultDashboardRoute, getRouteOwner, isAuthRoutes, UserRole } from './lib/auth-utils';
 
-const authRoutes = ['/login', '/register', 'forget-password'];
+
+
  
 // This function can be marked `async` if using `await` inside
 export async function proxy(request: NextRequest) {
+  const cookieStore = await cookies();
+  const pathname =  request.nextUrl.pathname;
 
-    const accessToken = request.cookies.get('accessToken')?.value;
-    const refreshToken = request.cookies.get('refreshToken')?.value;
+  const accessToken = request.cookies.get("accessToken")?.value || null;
 
-    const {pathname} = request.nextUrl;
+  let userRole : UserRole | null = null;
 
-    if(!accessToken && !refreshToken && !authRoutes.includes(pathname)){
-        return NextResponse.redirect(new URL(`/login?redirect=${pathname}`, request.url))
+  if(accessToken){
+    const verifiedToken : JwtPayload | string  = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET as string)
+
+
+    if(typeof verifiedToken === "string"){
+      cookieStore.delete("accessToken");
+      cookieStore.delete("refreshToken");
+      return NextResponse.redirect(new URL("/login", request.url))
     }
 
-     let user: userInterface | null = null;
+    userRole = verifiedToken.role;
+  }
 
-    if(accessToken){
-        try {
-            user = jwtDecode(accessToken)
-            
-        } catch (error : any) {
-            console.log("error decoding access token", error);
-             return NextResponse.redirect(new URL(`/login?redirect=${pathname}`, request.url))
-        }
+  const routeOwner = getRouteOwner(pathname);
+
+  const isAuth = isAuthRoutes(pathname);
+
+    // Rule 1 : User is logged in and trying to access auth route. Redirect to default dashboard
+  if(accessToken && isAuth){
+    return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url))
+  }
+
+   // Rule 2 : User is trying to access open public route
+    if (routeOwner === null) {
+        return NextResponse.next();
     }
 
 
+      // Rule 1 & 2 for open public routes and auth routes
+       if (!accessToken) {
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
+    }
+
+     // Rule 3 : User is trying to access common protected route
+    if (routeOwner === "COMMON") {
+        return NextResponse.next();
+    }
+
+        // Rule 4 : User is trying to access role based protected route
+    if (routeOwner === "ADMIN" || routeOwner === "DOCTOR" || routeOwner === "PATIENT") {
+      if(userRole !== routeOwner){
+        return NextResponse.redirect(new URL(getDefaultDashboardRoute(userRole as UserRole), request.url))
+      }
+    }
 
   return NextResponse.next()
 }
+
  
-// See "Matching Paths" below to learn more
 export const config = {
-  matcher: ['/dashboard/:path*', '/login', '/register', '/forgot-password'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+  ],
 }
