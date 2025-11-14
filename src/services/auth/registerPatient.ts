@@ -1,5 +1,6 @@
 "use server";
 import z from "zod";
+import { loginUser } from "./loginUser";
 
 const registerValidationZodSchema = z.object({
   name: z.string().min(1, { message: "Name is required" }),
@@ -63,15 +64,28 @@ export const registerPatient = async(_currentState :any, formData :any) : Promis
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/create-patient`,{
             method : "POST",
             body: newFormData
-        }).then(res => res.json());
-
-        console.log(res, "res");
-
-        return res;
+        })
         
-    } catch (error) {
+        const result =await res.json();
+
+        // console.log(res, "res");
+
+
+        if(result.success){
+            await loginUser(_currentState, formData)
+        }
+
+        return result;
+        
+    } catch (error : any) {
+         if(error?.digest?.startsWith('NEXT_REDIRECT')){
+            throw error;
+        }
+
+
         console.log(error);
-        return {error : "registration failed"}
+         return { success: false, message: `${process.env.NODE_ENV === 'development' ? error.message : "Registration Failed. You might have entered incorrect email or password."}` };
+    
     }
 
 }

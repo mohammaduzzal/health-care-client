@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { loginUser } from "@/services/auth/loginUser";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 
 
 const LoginForm = ({redirect} : {redirect?:string}) => {
   const [state, formAction, isPending] = useActionState(loginUser, null);
+
 
 
   const getFieldError = (fieldName : string) =>{
@@ -20,6 +22,13 @@ const LoginForm = ({redirect} : {redirect?:string}) => {
     }
 
   }
+
+
+  useEffect(()=>{
+     if (state && !state.success && state.message) {
+      toast.error(state.message);
+    }
+  },[state])
 
 
   return (
