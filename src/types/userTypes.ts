@@ -1,7 +1,7 @@
+import { UserRole } from "@/lib/auth-utils";
+
 export interface userInterface {
-  id: string;
+  name : string;
   email: string;
-  role: "ADMIN" | "DOCTOR" | "PATIENT";
-  exp: number;
-  iat: number;
+  role:  UserRole;
 }
