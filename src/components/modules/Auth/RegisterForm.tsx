@@ -1,5 +1,6 @@
 "use client";
 
+import InputFieldError from "@/components/shared/InputFieldError";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -12,14 +13,6 @@ import { toast } from "sonner";
 
 const RegisterForm = () => {
     const [state, formAction, isPending] = useActionState(registerPatient, null);
-
-   const getFieldError = (fieldName: string) => {
-  if (state?.errors) {
-    const error = state.errors.find((err: any) => err.field === fieldName);
-    return error?.message || null;
-  }
-  return null;
-};
 
 
 
@@ -39,11 +32,7 @@ const RegisterForm = () => {
           <Field>
             <FieldLabel htmlFor="name">Full Name</FieldLabel>
             <Input id="name" name="name" type="text" placeholder="John Doe" />
-            {getFieldError("name") && (
-              <FieldDescription className="text-red-600">
-                {getFieldError("name")}
-              </FieldDescription>
-            )}
+           <InputFieldError field="name" state={state}/>
           </Field>
           {/* Address */}
           <Field>
@@ -55,11 +44,7 @@ const RegisterForm = () => {
               placeholder="123 Main St"
             />
 
-            {getFieldError("address") && (
-              <FieldDescription className="text-red-600">
-                {getFieldError("address")}
-              </FieldDescription>
-            )}
+            <InputFieldError field="address" state={state}/>
           </Field>
           {/* Email */}
           <Field>
@@ -71,22 +56,14 @@ const RegisterForm = () => {
               placeholder="m@example.com"
             />
 
-            {getFieldError("email") && (
-              <FieldDescription className="text-red-600">
-                {getFieldError("email")}
-              </FieldDescription>
-            )}
+            <InputFieldError field="email" state={state}/>
           </Field>
           {/* Password */}
           <Field>
             <FieldLabel htmlFor="password">Password</FieldLabel>
             <Input id="password" name="password" type="password" />
 
-            {getFieldError("password") && (
-              <FieldDescription className="text-red-600">
-                {getFieldError("password")}
-              </FieldDescription>
-            )}
+            <InputFieldError field="password" state={state}/>
           </Field>
           {/* Confirm Password */}
           <Field className="md:col-span-2">
@@ -97,11 +74,7 @@ const RegisterForm = () => {
               type="password"
             />
 
-            {getFieldError("confirmPassword") && (
-              <FieldDescription className="text-red-600">
-                {getFieldError("confirmPassword")}
-              </FieldDescription>
-            )}
+            <InputFieldError field="confirmPassword" state={state}/>
           </Field>
         </div>
         <FieldGroup className="mt-4">
