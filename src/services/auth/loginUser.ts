@@ -1,20 +1,14 @@
 "use server";
-import z from "zod";
 import { parse } from "cookie";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { getDefaultDashboardRoute, isValidRedirectForRole, UserRole } from "@/lib/auth-utils";
 import { setCookie } from "./tokenHandlers";
+import { loginValidationSchema } from "@/zod/auth.validation";
+import { zodValidator } from "@/lib/zodValidator";
+import { serverFetch } from "@/lib/server-fatch";
 
-const loginValidationSchema = z.object({
-    email: z.email({ error: "Email is required" }),
-    password: z.string("Password is required").min(6, {
-        error: "Password is required and must be at least 6 characters long",
-    }).max(100, {
-        error: "Password must be at most 100 characters long",
-    }),
-})
+
 
 export const loginUser = async (_currentState: any, formData: any): Promise<any> => {
 
@@ -25,33 +19,25 @@ export const loginUser = async (_currentState: any, formData: any): Promise<any>
         let accessTokenObject: null | any = null;
         let refreshTokenObject: null | any = null;
 
-        const loginData = {
+        const payload = {
             email: formData.get('email'),
             password: formData.get('password')
         }
 
-        const validatedFields = loginValidationSchema.safeParse(loginData);
+        
 
-        if (!validatedFields.success) {
-            return {
-                success: false,
-                errors: validatedFields.error.issues.map(issue => {
-                    return {
-                        field: issue.path[0],
-                        message: issue.message
-                    }
-                })
-            }
+          if (zodValidator(payload, loginValidationSchema).success === false) {
+            return zodValidator(payload, loginValidationSchema);
         }
 
+        const validatedPayload = zodValidator(payload, loginValidationSchema).data;
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-            method: "POST",
+        const res = await serverFetch.post("/auth/login", {
+            body: JSON.stringify(validatedPayload),
             headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(loginData)
-        })
+                "Content-Type": "application/json",
+            }
+        });
 
 
         const result = await res.json();
